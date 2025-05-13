@@ -1,0 +1,146 @@
+🏗️ Infrastructure Design
+
+User
+  │
+  ▼
++------------------+
+|    Firewall 1    |  ← First layer of defense (e.g. to block unauthorized access)
++--------+---------+
+         |
+         ▼
++------------------+
+|   Load Balancer  | ← HAProxy or Nginx (Load Balancing + SSL Termination)
+|  (IP: 8.8.8.8)   |
++--------+---------+
+         |
+  +------+------+
+  |             |
+  ▼             ▼
++-----------+ +-----------+
+|  Firewall | |  Firewall |
+|    2      | |     3     |
+|           | |           |
++-----------+ +-----------+
+     |             |
+     ▼             ▼
++-----------+   +-----------+
+| Server 1  |   | Server 2  | ← Application Server (App Code, Web Server, DB)
+|           |   |           |
+| +-------+ |   | +-------+ |
+| | Nginx | |   | | Nginx | |
+| +---+---+ |   | +---+---+ |
+|     |     |   |     |     |
+| +---v---+ |   | +---v---+ |
+| | App   | |   | | App   | |
+| | Server| |   | | Server| |
+| +---+---+ |   | +---+---+ |
+|     |     |   |     |     |
+| +---v---+ |   | +---v---+ |
+| | MySQL | |   | | MySQL | |
+| |Primary| |   | |Replica| |
++-----------+   +-----------+
+     |
+     ▼
++-------------------+
+| Monitoring Client | ← Sumologic or other monitoring service
++-------------------+
+🔧 Why Add These Components?
+1. Firewalls (3)
+Purpose: Firewalls are used to control traffic flow, blocking unauthorized access and ensuring only legitimate requests are allowed.
+
+Where:
+
+Firewall 1: Sits in front of the load balancer, blocking malicious traffic before it reaches the backend servers.
+
+Firewall 2 & 3: Located between the load balancer and the servers to prevent direct access to the servers, ensuring only traffic routed through the load balancer reaches the application.
+
+Why 3 Firewalls?
+
+Multi-layer defense, also known as Defense in Depth, reduces risk of a single point of failure in the security structure.
+
+2. SSL Certificate (HTTPS)
+Purpose: The SSL certificate ensures that all communication between the user's browser and the server is encrypted, securing sensitive data such as passwords and personal information from eavesdropping or man-in-the-middle attacks.
+
+Where: The SSL termination happens at the load balancer. It decrypts incoming HTTPS traffic, then forwards it to the backend servers as HTTP or re-encrypts it depending on your setup (SSL passthrough).
+
+Why HTTPS?
+
+Encryption: Prevents interception of data during transmission.
+
+Security: Provides authentication (verifying the identity of the server).
+
+SEO: Google favors HTTPS websites, which can improve your SEO ranking.
+
+3. Monitoring Clients (3)
+Purpose: Monitoring tools like Sumologic, Prometheus, or Datadog provide visibility into the health and performance of the infrastructure. They can track things like server resource usage (CPU, RAM), application performance, request rates, and error logs.
+
+How it Works:
+
+Data Collection: Each server runs an agent (client) that collects metrics (e.g., QPS - queries per second, CPU utilization). These metrics are sent to a centralized monitoring platform.
+
+Alerts: The platform can be configured to alert you if specific thresholds are exceeded (e.g., high CPU, slow response time, high error rates).
+
+🧠 Specific Details About Monitoring
+Monitoring Web Server QPS (Queries Per Second)
+What to monitor:
+
+Use tools like Prometheus with Nginx exporter to collect data on QPS (number of requests per second).
+
+This metric will help you understand how much traffic your server is handling and whether you need to scale.
+
+How to Monitor QPS:
+
+Add a monitoring agent (client) to your servers that tracks web traffic metrics from Nginx.
+
+Send QPS metrics to the monitoring system (e.g., Sumologic).
+
+Set thresholds for alerts if QPS exceeds or falls below a normal range.
+
+🚨 Potential Issues in This Infrastructure
+1. SSL Termination at the Load Balancer Level
+Problem: Terminating SSL at the load balancer means that traffic between the load balancer and the backend servers is unencrypted. This can be a security risk if your internal network is compromised.
+
+Solution: Use SSL passthrough to forward the encrypted traffic directly to the backend servers or encrypt traffic between the load balancer and the backend servers.
+
+2. Only One MySQL Server Accepting Writes
+Problem: Having only one MySQL server that handles all writes (Primary node) creates a bottleneck and a single point of failure.
+
+Solution:
+
+Use a Master-Slave or Primary-Replica MySQL cluster.
+
+The Primary node handles writes, and the Replica nodes handle read traffic. This can balance the load and improve performance.
+
+For high availability, use Galera Cluster for multi-master replication or a more robust MySQL setup with failover.
+
+3. Servers with All the Same Components (Web Server, App Server, DB)
+Problem: Having all components (Nginx, App Server, MySQL) on each server creates several issues:
+
+Resource contention: Each server has to handle multiple roles, which can affect performance.
+
+Scaling limitations: As traffic grows, the server might not scale well because each component is limited by the same hardware resources.
+
+Solution:
+
+Separate concerns:
+
+Have dedicated web servers that just handle Nginx and routing.
+
+App servers should only handle application logic and code execution.
+
+Databases should be offloaded to a dedicated database server or cluster to avoid performance issues.
+
+🧠 TL;DR Summary
+Firewalls: Protect different layers of the system, blocking unwanted traffic.
+
+SSL Certificate: Encrypts traffic between the user and the server, preventing eavesdropping.
+
+Monitoring: Tracks server health, application performance, and critical metrics like QPS.
+
+Challenges:
+
+SSL Termination at the LB can weaken security if not done properly.
+
+Single MySQL Write Server introduces a bottleneck.
+
+Multi-component Servers (DB + Web + App) can lead to resource contention and scaling issues.

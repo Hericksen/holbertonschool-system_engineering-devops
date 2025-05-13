@@ -1,0 +1,126 @@
+🧑‍💻 Scenario: A User Visits www.foobar.com
+🌐 Step 1: DNS Resolution
+The user enters www.foobar.com
+
+DNS (via an A record) points to the load balancer’s public IP
+
+🏗️ Infrastructure Overview
+
+User
+  │
+  ▼
++-------------------+
+| Load Balancer     |  ← HAProxy
+| (IP: 8.8.8.8)      |
+| Algo: Round Robin |
++--------+----------+
+         |
+  +------+------+
+  |             |
+  ▼             ▼
++-----------+ +-----------+
+| Server 1  | | Server 2  |
+|           | |           |
+| +-------+ | | +-------+ |
+| | Nginx | | | | Nginx | |
+| +---+---+ | | +---+---+ |
+|     |     | |     |     |
+| +---v---+ | | +---v---+ |
+| | App   | | | | App   | |
+| | Server| | | | Server| |
+| +---+---+ | | +---+---+ |
+|     |     | |     |     |
+| +---v---+ | | +---v---+ |
+| | MySQL | | | | MySQL | |
+| |Primary| | | |Replica| |
++-----------+ +-----------+
+🔧 Why Add These Components?
+1. Load Balancer (HAProxy)
+Distributes traffic between servers.
+
+Prevents overloading one server.
+
+First line of defense against failure.
+
+Distribution algorithm:
+
+Round Robin: Each request is forwarded to the next server in a rotating list.
+
+Request 1 → Server 1
+
+Request 2 → Server 2
+
+Request 3 → Server 1
+→ Ensures even load distribution.
+
+Active-Active Setup:
+
+Both backend servers handle traffic simultaneously.
+
+More efficient, higher availability.
+
+(vs Active-Passive):
+
+One server handles everything; the other is idle and only kicks in on failure.
+
+Active-Active = All engines go.
+Active-Passive = Backup only if the main dies.
+
+2. Two Web+App+DB Servers
+Each backend server includes:
+
+Nginx (Web Server): Serves static content, routes requests to app.
+
+App Server (e.g. PHP-FPM, Node.js): Processes dynamic logic.
+
+Code base: Same copy deployed to both servers.
+
+MySQL:
+
+Server 1 = Primary
+
+Server 2 = Replica
+
+🔁 MySQL Primary-Replica Setup
+🔵 Primary Node (Server 1)
+Handles write operations (INSERT, UPDATE, DELETE).
+
+Application sends all DB write requests here.
+
+🟢 Replica Node (Server 2)
+Handles read operations only (SELECT).
+
+Replicates data from the primary using a binary log stream.
+
+❗ Application must be smart enough to send writes to primary and reads to replica (often via proxy or middleware).
+
+🚨 Weaknesses in This Infrastructure
+1. SPOF (Single Point of Failure)
+Load Balancer is a single point of failure. If it goes down, everything goes down.
+
+💡 Fix: Add a second LB and use VRRP (e.g. Keepalived) for failover.
+
+2. Security Issues
+No HTTPS: Data is in clear text. Vulnerable to sniffing.
+
+💡 Fix: Use SSL/TLS certs (Let’s Encrypt, etc.)
+
+No Firewall: Open ports = open invitation.
+
+💡 Fix: Restrict ports (e.g. block direct MySQL access from outside)
+
+3. No Monitoring
+No visibility into CPU, memory, request rate, disk I/O.
+
+💡 Fix: Add tools like Prometheus + Grafana, or hosted monitoring (Datadog, New Relic, etc.)
+
+🧠 TL;DR Summary
+Load balancer makes traffic sharing possible = less stress on one server.
+
+Two servers allow redundancy and scaling.
+
+Primary-Replica DB lets you scale reads, protects data (kind of).
+
+Round Robin = basic, even load distribution.
+
+Still fragile: SPOF on the load balancer, lacks HTTPS and monitoring.

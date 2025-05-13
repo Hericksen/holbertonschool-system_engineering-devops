@@ -1,0 +1,103 @@
+✅ Scenario: A User Visits www.foobar.com
+🧑‍💻 Step 1: The User Enters the Website URL
+A user opens their browser and types www.foobar.com.
+
+This request kicks off the DNS resolution process.
+
+🌐 Step 2: DNS Resolution
+The browser asks the Domain Name System (DNS): “Hey, what’s the IP of www.foobar.com?”
+
+A DNS 'A' record for the subdomain www is used here.
+
+Record type: A (Address Record)
+
+Maps: www.foobar.com ➝ 8.8.8.8
+
+👉 Explanation:
+The domain name is a human-friendly way to access the website. Instead of memorizing 8.8.8.8, users just type www.foobar.com. DNS translates that into the actual server IP.
+
+🖥️ Step 3: The Request Reaches the Server
+The request goes to the single server at IP 8.8.8.8.
+
+Here’s what this one (very busy) server contains:
+
+┌────────────────────────────────────────┐
+│              SERVER                    │
+│         (IP: 8.8.8.8)                  │
+│                                        │
+│ ┌──────────────┐   ┌────────────────┐  │
+│ │  Web Server  │──▶│ App Server     │──┐
+│ │  (Nginx)     │   │ (e.g. PHP-FPM) │  │
+│ └──────────────┘   └────────────────┘  │
+│        │                        ▲      │
+│        ▼                        │      │
+│  Serves static files            │      │
+│  and routes requests            │      │
+│        │                        │      │
+│        ▼                        │      │
+│  ┌──────────────┐              ▼      │
+│  │  Application │ <── Code base       │
+│  │   Files      │     (e.g. PHP)      │
+│  └──────────────┘                     │
+│        │                              │
+│        ▼                              │
+│  ┌─────────────┐                      │
+│  │  MySQL DB   │                      │
+│  └─────────────┘                      │
+└────────────────────────────────────────┘
+📦 Component Roles
+🧠 What Is a Server?
+A server is a computer designed to receive requests from clients (like browsers) and respond with data—like web pages, files, or JSON APIs. In this case, it's the one-stop shop that does everything.
+
+🌍 Domain Name Role
+The domain name (foobar.com) is a readable alias for an IP address. It’s easier for users to remember.
+
+📇 DNS Record: www
+www is a subdomain.
+
+The record type is an A record.
+
+It maps www.foobar.com to the IP 8.8.8.8.
+
+🔥 Web Server (Nginx)
+Listens for HTTP(S) requests on port 80/443.
+
+Delivers static files like images, CSS, JS.
+
+Acts as a reverse proxy, forwarding dynamic requests to the application server.
+
+⚙️ Application Server (e.g. PHP-FPM)
+Processes business logic.
+
+Executes the application code (like index.php).
+
+Interfaces with the database to fetch/store data.
+
+💾 Database (MySQL)
+Stores all persistent data: user accounts, blog posts, products, etc.
+
+The application queries it using SQL.
+
+🧵 Communication Protocol
+Communication between the user's browser and the web server uses HTTP or HTTPS, over TCP/IP.
+
+⚠️ Weaknesses of This Setup
+1. SPOF (Single Point of Failure)
+One server = one place to crash. If it dies, your entire website goes offline.
+
+2. Maintenance Downtime
+If you need to update the app, restart Nginx, or apply security patches, you must stop or restart the server. Boom—temporary downtime.
+
+3. No Scalability
+One server handles all requests. If traffic spikes (say, a viral post or product launch), it will choke and possibly crash.
+
+🧠 Summary
+This setup is simple and cheap—perfect for prototypes, portfolios, or small apps. But if the site grows, you’ll quickly need:
+
+Load balancers
+
+Separate DB server
+
+App replication
+
+Cloud scaling

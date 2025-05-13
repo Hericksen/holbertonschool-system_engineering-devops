@@ -1,0 +1,137 @@
+📄 Readme: Infrastructure Overview - Web and Application Servers
+1. Overall Architecture
+The infrastructure consists of the following components:
+
+1 Server
+
+2 Load-Balancers (HAProxy cluster)
+
+3 distinct components: Web Server, Application Server, and Database, each residing on its own dedicated server.
+
+The load-balancer cluster will distribute traffic across the servers, and the components are isolated to ensure better performance, scalability, and fault tolerance.
+
+Architecture Design:
+pgsql
+Copier
+Modifier
+User
+  │
+  ▼
++--------------------+
+|  Load Balancer 1   | ← HAProxy Cluster (Primary)
+| (IP: 8.8.8.8)      |
++--------+-----------+
+         |
+  +------v------+
+  |             |
+  ▼             ▼
++-----------+ +-----------+
+| Web Server| | Web Server|
+|  (Nginx)  | |  (Nginx)  |
++-----+-----+ +-----+-----+
+      |           |
+      ▼           ▼
++-----v-----+   +-----v-----+
+| App Server|   | App Server|
+| (PHP/Node)|   | (PHP/Node)|
++-----+-----+   +-----+-----+
+      |           |
+      ▼           ▼
++-----v-----+   +-----v-----+
+| Database  |   | Database  |
+|  (MySQL)  |   | (MySQL)   |
++-----------+   +-----------+
+2. Key Components and Their Purpose
+1. Load Balancer Cluster (HAProxy)
+Why Add It: The load balancer is crucial for distributing incoming web traffic across the available servers to prevent overload on a single server. The HAProxy cluster ensures redundancy and load balancing.
+
+HAProxy Cluster:
+
+Why a Cluster?: A cluster of two load balancers ensures high availability. If one load balancer fails, the other continues to handle the traffic without downtime.
+
+Configuration: The load balancers use Round Robin or Least Connections algorithms to distribute requests evenly across the web servers.
+
+2. Web Servers (Nginx)
+Why Add It: Web servers like Nginx handle static content (images, CSS, JavaScript) and route requests to the appropriate application server for dynamic content.
+
+Why Use Nginx:
+
+Performance: Nginx is lightweight, high-performance, and can handle a large number of simultaneous connections efficiently.
+
+Reverse Proxy: Nginx forwards requests for dynamic content to the application server and handles static files directly.
+
+Splitting Web and App Servers:
+
+This separation ensures that each server has a clear responsibility, optimizing resource allocation.
+
+3. Application Servers (PHP, Node.js, etc.)
+Why Add It: The application server processes the business logic of the application, handling database queries, form submissions, and dynamic content generation.
+
+Why Separate from Web Server?:
+
+Resource Allocation: Web servers should only serve static content and route dynamic content to application servers. Application servers handle the complex logic, keeping web servers free from excessive computation.
+
+Scalability: Isolating the web and application servers allows you to scale them independently depending on the load.
+
+Common Frameworks for App Servers:
+
+PHP-FPM, Node.js, or Python (Flask/Django) could be used based on the application.
+
+4. Database Server (MySQL)
+Why Add It: The database server stores all the persistent data, such as user information, transactions, and application state. A separate database server ensures better performance and scalability.
+
+Why Separate from Application Server?:
+
+Performance: Databases are resource-intensive and often require more CPU and RAM. Separating the database from the application server allows the application to run without performance degradation due to heavy DB operations.
+
+Scalability: If database load increases, it can be scaled independently of the web and application servers.
+
+Database Configuration:
+
+The database can be configured as a Primary-Replica (Master-Slave) setup if needed for scalability. The primary handles writes, and replicas handle reads.
+
+3. What is the Role of Each Element?
+Load Balancer:
+
+Role: Distributes incoming traffic across multiple web servers, ensuring no single server is overwhelmed.
+
+Ensures high availability by forwarding requests to the active server in the cluster.
+
+Web Server (Nginx):
+
+Role: Handles static content and acts as a reverse proxy to forward dynamic requests to the application server.
+
+Application Server:
+
+Role: Processes business logic, handles dynamic requests (data processing, user interactions), and communicates with the database.
+
+Database Server:
+
+Role: Stores and manages the application’s data. It responds to database queries from the application server.
+
+4. Issues with This Infrastructure
+1. Single Load Balancer SPOF
+Problem: The load balancer could become a Single Point of Failure (SPOF) if it goes down, causing traffic disruption.
+
+Solution: Implement HAProxy clustering to have redundancy. If one load balancer fails, the other can handle traffic.
+
+2. Single Database Write Node
+Problem: Having only one MySQL server capable of accepting writes could be a bottleneck as traffic grows. This single database could also fail and cause downtime.
+
+Solution: Set up MySQL replication with Primary-Replica (Master-Slave) configuration. Write requests go to the Primary node, and Replica nodes handle read requests, distributing the load and ensuring redundancy.
+
+3. Lack of Horizontal Scaling for Web and App Servers
+Problem: Having only one server each for the web, app, and database limits the ability to scale horizontally.
+
+Solution: Add more web servers and application servers as traffic increases. You can add more servers behind the load balancer and scale the application servers as needed.
+
+5. Conclusion: Benefits of the Infrastructure
+Separation of Concerns: Isolating the web server, application server, and database allows better resource management and scalability.
+
+High Availability: The load balancer cluster ensures that traffic is always routed, even if one load balancer fails.
+
+Scalability: Each server can be scaled individually (more web servers, more app servers, or a more powerful DB).
+
+Performance: The system is optimized to handle traffic spikes with more dedicated resources for different components.
+
+This setup ensures a well-balanced, scalable, and fault-tolerant infrastructure.
